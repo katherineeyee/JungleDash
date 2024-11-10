@@ -41,7 +41,8 @@ class JungleDash(arcade.Window):
     def setup(self):
         self.elapsed_time = 0.0
         self.score = 0
-        self.health = 100
+        self.health = 200
+        self.health_x = 100
         self.textures = {
             tex: arcade.load_texture(ASSETS_PATH / f"{tex}.png") for tex in ALL_TEXTURES
         }
@@ -149,11 +150,14 @@ class JungleDash(arcade.Window):
 
         # Check for collisions with obstacles
         collisions = self.player_sprite.collides_with_list(self.obstacles_list)
-        if collisions and not DEBUG:
+        for collision in collisions:
             self.monkey_state = MonkeyStates.CRASHING
-            self.health -= 20  # Decrease health on collision with obstacle
+            collision.remove_from_sprite_lists()
+            self.health -= 40  # Decrease health on collision with obstacle
+            self.health_x -= 20
             if self.health <= 0:
                 self.game_state = GameStates.GAMEOVER  # End game if health is gone
+            self.monkey_state = MonkeyStates.RUNNING
 
         # Spawn new obstacles relative to the monkey
         last_obstacle_x = max(obstacle.right for obstacle in self.obstacles_list)
@@ -184,8 +188,8 @@ class JungleDash(arcade.Window):
         arcade.draw_text(f"Score: {self.score:05}", SCREEN_WIDTH - 200, SCREEN_HEIGHT - 50, arcade.color.BLACK, 20)
 
         # Draw health bar
-        health_bar_width = 200 * (self.health / 100)
-        arcade.draw_rectangle_filled(100, SCREEN_HEIGHT - 30, health_bar_width, 20, arcade.color.GREEN)
+        # health_bar_width = 200 * (self.health / 100)
+        arcade.draw_rectangle_filled(self.health_x, SCREEN_HEIGHT - 30, self.health, 20, arcade.color.GREEN)
         arcade.draw_rectangle_outline(100, SCREEN_HEIGHT - 30, 200, 20, arcade.color.BLACK, 2)
 
         # Draw Game Over text if health reaches zero

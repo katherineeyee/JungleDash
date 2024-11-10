@@ -1,0 +1,1 @@
+self.health_x = 100
