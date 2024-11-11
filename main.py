@@ -70,7 +70,9 @@ class JungleDash(arcade.Window):
         self.scene.add_sprite_list("horizon", False, self.horizon_list)
 
         # Monkey setup
-        self.player_sprite = arcade.Sprite(ASSETS_PATH / "monkey.png")
+        self.player_sprite_running = [ASSETS_PATH / "monkey.png", ASSETS_PATH / "monkey2.png"]
+        self.player_sprite_jumping = ASSETS_PATH / "monkey_jumping.png"
+        self.player_sprite = arcade.Sprite(self.player_sprite_running[0])
         self.player_sprite.center_x = 200
         self.player_sprite.center_y = 120
         self.player_sprite.texture = self.textures["monkey"]
@@ -78,6 +80,8 @@ class JungleDash(arcade.Window):
         self.player_list.append(self.player_sprite)
         self.scene.add_sprite("player", self.player_sprite)
         self.monkey_state = MonkeyStates.RUNNING
+        self.monkey_frame_count = 0
+        self.monkey_frame = 0
 
         # Bananas setup
         self.banana_list = arcade.SpriteList()
@@ -93,6 +97,8 @@ class JungleDash(arcade.Window):
         self.add_obstacles(self.player_sprite.center_x + OBSTACLE_SPAWN_DISTANCE, LEVEL_WIDTH_PIXELS)
         self.scene.add_sprite_list("obstacles", True, self.obstacles_list)
 
+        self.heart = arcade.load_texture(ASSETS_PATH / "heart.png")
+        
         # Physics engine
         self.physics_engine = arcade.PhysicsEnginePlatformer(
             self.player_sprite, self.horizon_list, gravity_constant=0.4
@@ -113,6 +119,7 @@ class JungleDash(arcade.Window):
         if key == arcade.key.SPACE and self.monkey_state != MonkeyStates.JUMPING:
             self.monkey_state = MonkeyStates.JUMPING
             self.physics_engine.jump(7)
+            # self.player_sprite.texture = arcade.load_texture(self.player_sprite_jumping)
         elif key == arcade.key.ESCAPE:
             exit()
 
@@ -130,8 +137,31 @@ class JungleDash(arcade.Window):
             self.player_sprite.change_x = 0
             self.player_sprite.texture = self.textures["monkey"]
             return
-        self.elapsed_time += delta_time
-        monkey_frame = 1 + int(self.elapsed_time * 10) % 2
+        
+
+        if MonkeyStates.JUMPING:
+            self.player_sprite.texture= arcade.load_texture(self.player_sprite_jumping)
+            print(self.monkey_state)
+        else:
+            pass
+            # print(self.monkey_state)
+            # self.elapsed_time += delta_time
+            # self.monkey_frame_count += delta_time / 0.1
+            # if self.monkey_frame_count >= 1.7:
+            #     self.monkey_frame_count = 0  # Reset frame counter
+            #     self.monkey_frame = (self.monkey_frame + 1) % 2  # Switch between 0 and 1
+                        
+            #     # Set the player sprite's texture to alternate between the two
+            #     self.player_sprite.texture = arcade.load_texture(self.player_sprite_running[self.monkey_frame])
+        if self.player_sprite.center_y <= 120:
+            self.elapsed_time += delta_time
+            self.monkey_frame_count += delta_time / 0.1
+            if self.monkey_frame_count >= 1.7:
+                self.monkey_frame_count = 0
+                self.monkey_frame = (self.monkey_frame + 1) % 2
+            self.player_sprite.texture = arcade.load_texture(self.player_sprite_running[self.monkey_frame])
+        self.player_sprite.update()
+
         self.player_list.update()
         self.physics_engine.update()
 
@@ -183,14 +213,14 @@ class JungleDash(arcade.Window):
         self.camera_sprites.use()
         self.scene.draw(filter=GL_NEAREST)
         self.camera_gui.use()
+        arcade.draw_texture_rectangle(28, SCREEN_HEIGHT - 30, self.heart.width, self.heart.height, self.heart)
 
         # Draw score
         arcade.draw_text(f"Score: {self.score:05}", SCREEN_WIDTH - 200, SCREEN_HEIGHT - 50, arcade.color.BLACK, 20)
 
         # Draw health bar
-        # health_bar_width = 200 * (self.health / 100)
-        arcade.draw_rectangle_filled(self.health_x, SCREEN_HEIGHT - 30, self.health, 20, arcade.color.GREEN)
-        arcade.draw_rectangle_outline(100, SCREEN_HEIGHT - 30, 200, 20, arcade.color.BLACK, 2)
+        arcade.draw_rectangle_filled(self.health_x + 50, SCREEN_HEIGHT - 30, self.health, 20, arcade.color.GREEN)
+        arcade.draw_rectangle_outline(150, SCREEN_HEIGHT - 30, 200, 20, arcade.color.BLACK, 2)
 
         # Draw Game Over text if health reaches zero
         if self.game_state == GameStates.GAMEOVER:
