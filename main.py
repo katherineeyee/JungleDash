@@ -66,7 +66,7 @@ class JungleDash(arcade.Window):
         for col in range(LEVEL_WIDTH_PIXELS // GROUND_WIDTH):
             horizon_sprite = arcade.Sprite(ASSETS_PATH / f"horizon.png")
             # horizon_sprite.hit_box = [[-300, -10], [300, -10], [300, -6], [-300, -6]]
-            horizon_sprite.left = GROUND_WIDTH * col
+            horizon_sprite.left = GROUND_WIDTH * (col - 1)
             horizon_sprite.bottom = 0
             self.horizon_list.append(horizon_sprite)
         self.scene.add_sprite_list("horizon", False, self.horizon_list)
@@ -85,15 +85,15 @@ class JungleDash(arcade.Window):
         self.monkey_frame_count = 0
         self.monkey_frame = 0
 
-        # Bananas setup
-        self.bananas_list = arcade.SpriteList()
-        self.add_bananas(self.player_sprite.center_x + SPAWN_DISTANCE, LEVEL_WIDTH_PIXELS)
-        self.scene.add_sprite_list("bananas", True, self.bananas_list)
-
         # Obstacles setup
         self.obstacles_list = arcade.SpriteList()
         self.add_obstacles(self.player_sprite.center_x + SPAWN_DISTANCE, LEVEL_WIDTH_PIXELS)
         self.scene.add_sprite_list("obstacles", True, self.obstacles_list)
+
+         # Bananas setup
+        self.bananas_list = arcade.SpriteList()
+        self.add_bananas(self.player_sprite.center_x + SPAWN_DISTANCE, LEVEL_WIDTH_PIXELS)
+        self.scene.add_sprite_list("bananas", True, self.bananas_list)
 
         self.heart = arcade.load_texture(ASSETS_PATH / "heart.png")
         
@@ -110,6 +110,8 @@ class JungleDash(arcade.Window):
             banana_sprite.left = xpos
             banana_sprite.bottom = 30
             xpos += banana_sprite.width + randint(200, 300)
+            while banana_sprite.collides_with_list(self.obstacles_list):
+                banana_sprite.left = banana_sprite.left - 175
             self.bananas_list.append(banana_sprite)
 
     def add_obstacles(self, xmin, xmax):
@@ -127,7 +129,6 @@ class JungleDash(arcade.Window):
         if key == arcade.key.SPACE and self.monkey_state != MonkeyStates.JUMPING:
             self.monkey_state = MonkeyStates.JUMPING
             self.physics_engine.jump(7)
-            # self.player_sprite.texture = arcade.load_texture(self.player_sprite_jumping)
         elif key == arcade.key.ESCAPE:
             exit()
 
@@ -144,23 +145,13 @@ class JungleDash(arcade.Window):
         if self.game_state == GameStates.GAMEOVER:
             self.player_sprite.change_x = 0
             self.player_sprite.texture = self.textures["monkey"]
-            return
-        
+            return   
 
         if MonkeyStates.JUMPING:
             self.player_sprite.texture= arcade.load_texture(self.player_sprite_jumping)
-            print(self.monkey_state)
         else:
             pass
-            # print(self.monkey_state)
-            # self.elapsed_time += delta_time
-            # self.monkey_frame_count += delta_time / 0.1
-            # if self.monkey_frame_count >= 1.7:
-            #     self.monkey_frame_count = 0  # Reset frame counter
-            #     self.monkey_frame = (self.monkey_frame + 1) % 2  # Switch between 0 and 1
-                        
-            #     # Set the player sprite's texture to alternate between the two
-            #     self.player_sprite.texture = arcade.load_texture(self.player_sprite_running[self.monkey_frame])
+
         if self.player_sprite.center_y <= 120:
             self.elapsed_time += delta_time
             self.monkey_frame_count += delta_time / 0.1
@@ -168,8 +159,10 @@ class JungleDash(arcade.Window):
                 self.monkey_frame_count = 0
                 self.monkey_frame = (self.monkey_frame + 1) % 2
             self.player_sprite.texture = arcade.load_texture(self.player_sprite_running[self.monkey_frame])
+        if self.player_sprite.top > SCREEN_HEIGHT:
+            self.player_sprite.top = SCREEN_HEIGHT
+        
         self.player_sprite.update()
-
         self.player_list.update()
         self.physics_engine.update()
 
@@ -239,6 +232,7 @@ class JungleDash(arcade.Window):
         # Draw Game Over text if health reaches zero
         if self.game_state == GameStates.GAMEOVER:
             arcade.draw_text("G A M E   O V E R", SCREEN_WIDTH // 2, SCREEN_HEIGHT - 80, arcade.color.BLACK, 30, anchor_x="center")
+            # arcade.draw_text("press the space bar to restart", SCREEN_WIDTH // 2, SCREEN_HEIGHT - 80, arcade.color.BLACK, 20, anchor_x="center")
 
 def main():
     window = JungleDash(SCREEN_WIDTH, SCREEN_HEIGHT, WINDOW_TITLE)
