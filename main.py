@@ -95,7 +95,11 @@ class JungleDash(arcade.Window):
         self.add_bananas(self.player_sprite.center_x + SPAWN_DISTANCE, LEVEL_WIDTH_PIXELS)
         self.scene.add_sprite_list("bananas", True, self.bananas_list)
 
+        # Heart graphic setup
         self.heart = arcade.load_texture(ASSETS_PATH / "heart.png")
+
+        # Timer setup
+        self.timer_text = arcade.Text(text="00:00:00", start_x=SCREEN_WIDTH - 200, start_y=SCREEN_HEIGHT - 85, color=arcade.color.BLACK, font_size=20)
         
         # Physics engine
         self.physics_engine = arcade.PhysicsEnginePlatformer(
@@ -213,6 +217,13 @@ class JungleDash(arcade.Window):
         self.player_sprite.change_x = PLAYER_SPEED
         self.camera_sprites.move((self.player_sprite.left - 30, 0))
 
+        # Handle timer
+        self.elapsed_time += delta_time
+        minutes = int(self.elapsed_time) / 60
+        seconds = int(self.elapsed_time) % 60
+        milliseconds = int((self.elapsed_time - seconds) * 100)
+        self.timer_text.text = f"Timer: {int(minutes)}:{seconds}:{milliseconds}"
+
     def on_draw(self):
         arcade.start_render()
         self.camera_gui.use()
@@ -220,6 +231,7 @@ class JungleDash(arcade.Window):
         self.camera_sprites.use()
         self.scene.draw(filter=GL_NEAREST)
         self.camera_gui.use()
+        self.timer_text.draw()
         arcade.draw_texture_rectangle(28, SCREEN_HEIGHT - 30, self.heart.width, self.heart.height, self.heart)
 
         # Draw score
@@ -232,7 +244,7 @@ class JungleDash(arcade.Window):
         # Draw Game Over text if health reaches zero
         if self.game_state == GameStates.GAMEOVER:
             arcade.draw_text("G A M E   O V E R", SCREEN_WIDTH // 2, SCREEN_HEIGHT - 80, arcade.color.BLACK, 30, anchor_x="center")
-            # arcade.draw_text("press the space bar to restart", SCREEN_WIDTH // 2, SCREEN_HEIGHT - 80, arcade.color.BLACK, 20, anchor_x="center")
+            arcade.draw_text("press the space bar to restart", SCREEN_WIDTH // 2, SCREEN_HEIGHT - 120, arcade.color.BLACK, 15, anchor_x="center")
 
 def main():
     window = JungleDash(SCREEN_WIDTH, SCREEN_HEIGHT, WINDOW_TITLE)
