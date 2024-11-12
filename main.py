@@ -16,12 +16,12 @@ LEVEL_WIDTH_PIXELS = GROUND_WIDTH * ((SCREEN_WIDTH * 4) // GROUND_WIDTH)
 ALL_TEXTURES = [
     "monkey",
 ]
-PLAYER_SPEED = 2.0
-MAX_CLOUDS = 3
+PLAYER_SPEED = 3.0
+MAX_CLOUDS = 4
 CLOUD_YPOS_MIN = 300
 CLOUD_YPOS_MAX = 340
-CLOUD_SPEED = -0.2 
-OBSTACLE_SPAWN_DISTANCE = SCREEN_WIDTH
+CLOUD_SPEED = -0.1 
+SPAWN_DISTANCE = SCREEN_WIDTH
 
 MonkeyStates = Enum("MonkeyStates", "IDLING RUNNING JUMPING CRASHING")
 GameStates = Enum("GameStates", "PLAYING GAMEOVER")
@@ -49,7 +49,9 @@ class JungleDash(arcade.Window):
         self.game_state = GameStates.PLAYING
 
         # Scene setup
-        self.scene = arcade.Scene()
+
+        # Clear sprite lists to ensure a fresh start
+        self.scene = arcade.Scene()  # Reset the scene
 
         # Clouds Setup
         self.clouds_list = arcade.SpriteList()
@@ -63,9 +65,9 @@ class JungleDash(arcade.Window):
         self.horizon_list = arcade.SpriteList()
         for col in range(LEVEL_WIDTH_PIXELS // GROUND_WIDTH):
             horizon_sprite = arcade.Sprite(ASSETS_PATH / f"horizon.png")
-            horizon_sprite.hit_box = [[-300, -10], [300, -10], [300, -6], [-300, -6]]
+            # horizon_sprite.hit_box = [[-300, -10], [300, -10], [300, -6], [-300, -6]]
             horizon_sprite.left = GROUND_WIDTH * col
-            horizon_sprite.bottom = 5
+            horizon_sprite.bottom = 0
             self.horizon_list.append(horizon_sprite)
         self.scene.add_sprite_list("horizon", False, self.horizon_list)
 
@@ -84,17 +86,13 @@ class JungleDash(arcade.Window):
         self.monkey_frame = 0
 
         # Bananas setup
-        self.banana_list = arcade.SpriteList()
-        for i in range(10):
-            banana = arcade.Sprite(ASSETS_PATH / "banana.png", 0.2)
-            banana.center_x = randint(300, LEVEL_WIDTH_PIXELS - 100)
-            banana.center_y = 50
-            self.banana_list.append(banana)
-        self.scene.add_sprite_list("bananas", False, self.banana_list)
+        self.bananas_list = arcade.SpriteList()
+        self.add_bananas(self.player_sprite.center_x + SPAWN_DISTANCE, LEVEL_WIDTH_PIXELS)
+        self.scene.add_sprite_list("bananas", True, self.bananas_list)
 
         # Obstacles setup
         self.obstacles_list = arcade.SpriteList()
-        self.add_obstacles(self.player_sprite.center_x + OBSTACLE_SPAWN_DISTANCE, LEVEL_WIDTH_PIXELS)
+        self.add_obstacles(self.player_sprite.center_x + SPAWN_DISTANCE, LEVEL_WIDTH_PIXELS)
         self.scene.add_sprite_list("obstacles", True, self.obstacles_list)
 
         self.heart = arcade.load_texture(ASSETS_PATH / "heart.png")
@@ -103,6 +101,16 @@ class JungleDash(arcade.Window):
         self.physics_engine = arcade.PhysicsEnginePlatformer(
             self.player_sprite, self.horizon_list, gravity_constant=0.4
         )
+    
+    def add_bananas(self, xmin, xmax):
+        """Adds bananas at a specified distance in front of the monkey."""
+        xpos = xmin
+        while xpos < xmax:
+            banana_sprite = arcade.Sprite(ASSETS_PATH / f"banana.png")
+            banana_sprite.left = xpos
+            banana_sprite.bottom = 30
+            xpos += banana_sprite.width + randint(200, 300)
+            self.bananas_list.append(banana_sprite)
 
     def add_obstacles(self, xmin, xmax):
         """Adds obstacles at a specified distance in front of the monkey."""
@@ -173,10 +181,16 @@ class JungleDash(arcade.Window):
                 cloud.top = randint(CLOUD_YPOS_MIN, CLOUD_YPOS_MAX)
 
         # Check for collisions with bananas
-        bananas_collected = arcade.check_for_collision_with_list(self.player_sprite, self.banana_list)
+        bananas_collected = self.player_sprite.collides_with_list(self.bananas_list)
         for banana in bananas_collected:
+            self.monkey_state = MonkeyStates.CRASHING
             banana.remove_from_sprite_lists()
             self.score += 10  # Increase score by 10 for each banana collected
+
+        # Spawn new bananas relative to the monkey
+        last_banana_x = max(banana.right for banana in self.bananas_list)
+        if last_banana_x < self.player_sprite.center_x + SPAWN_DISTANCE:
+            self.add_bananas(last_banana_x + SPAWN_DISTANCE, last_banana_x + 2 * SPAWN_DISTANCE)
 
         # Check for collisions with obstacles
         collisions = self.player_sprite.collides_with_list(self.obstacles_list)
@@ -191,8 +205,8 @@ class JungleDash(arcade.Window):
 
         # Spawn new obstacles relative to the monkey
         last_obstacle_x = max(obstacle.right for obstacle in self.obstacles_list)
-        if last_obstacle_x < self.player_sprite.center_x + OBSTACLE_SPAWN_DISTANCE:
-            self.add_obstacles(last_obstacle_x + OBSTACLE_SPAWN_DISTANCE, last_obstacle_x + 2 * OBSTACLE_SPAWN_DISTANCE)
+        if last_obstacle_x < self.player_sprite.center_x + SPAWN_DISTANCE:
+            self.add_obstacles(last_obstacle_x + SPAWN_DISTANCE, last_obstacle_x + 2 * SPAWN_DISTANCE)
 
         # Continuous horizon handling
         first_horizon_segment = self.horizon_list[0]
