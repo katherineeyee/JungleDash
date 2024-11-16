@@ -20,7 +20,7 @@ PLAYER_SPEED = 3.0
 MAX_CLOUDS = 4
 CLOUD_YPOS_MIN = 300
 CLOUD_YPOS_MAX = 340
-CLOUD_SPEED = -0.1 
+CLOUD_SPEED = -0.4
 SPAWN_DISTANCE = SCREEN_WIDTH
 
 MonkeyStates = Enum("MonkeyStates", "IDLING RUNNING JUMPING CRASHING")
@@ -107,7 +107,6 @@ class JungleDash(arcade.Window):
         )
     
     def add_bananas(self, xmin, xmax):
-        """Adds bananas at a specified distance in front of the monkey."""
         xpos = xmin
         while xpos < xmax:
             banana_sprite = arcade.Sprite(ASSETS_PATH / f"banana.png")
@@ -119,7 +118,6 @@ class JungleDash(arcade.Window):
             self.bananas_list.append(banana_sprite)
 
     def add_obstacles(self, xmin, xmax):
-        """Adds obstacles at a specified distance in front of the monkey."""
         xpos = xmin
         while xpos < xmax:
             variant = choice(["1", "2", "3"])
@@ -145,14 +143,22 @@ class JungleDash(arcade.Window):
         if self.game_state == GameStates.GAMEOVER:
             self.setup()
 
+    def calculate_player_speed(self, base_speed, elapsed_time, scaling_factor=0.1):
+        return base_speed + (scaling_factor * elapsed_time)
+
+
     def on_update(self, delta_time):
         if self.game_state == GameStates.GAMEOVER:
             self.player_sprite.change_x = 0
             self.player_sprite.texture = self.textures["monkey"]
             return   
 
+        # Adjust speed based on elapsed time
+        global PLAYER_SPEED
+        PLAYER_SPEED = self.calculate_player_speed(3.0, self.elapsed_time, scaling_factor=0.05)
+
         if MonkeyStates.JUMPING:
-            self.player_sprite.texture= arcade.load_texture(self.player_sprite_jumping)
+            self.player_sprite.texture = arcade.load_texture(self.player_sprite_jumping)
         else:
             pass
 
@@ -165,10 +171,21 @@ class JungleDash(arcade.Window):
             self.player_sprite.texture = arcade.load_texture(self.player_sprite_running[self.monkey_frame])
         if self.player_sprite.top > SCREEN_HEIGHT:
             self.player_sprite.top = SCREEN_HEIGHT
-        
+
         self.player_sprite.update()
         self.player_list.update()
         self.physics_engine.update()
+
+        # Update horizon and camera with new PLAYER_SPEED
+        self.player_sprite.change_x = PLAYER_SPEED
+        self.camera_sprites.move((self.player_sprite.left - 30, 0))
+
+        # Handle timer
+        self.elapsed_time += delta_time
+        minutes = int(self.elapsed_time) / 60
+        seconds = int(self.elapsed_time) % 60
+        milliseconds = int((self.elapsed_time - seconds) * 100)
+        self.timer_text.text = f"Timer: {int(minutes)}:{seconds}:{milliseconds}"
 
         # Move clouds
         for cloud in self.clouds_list:
