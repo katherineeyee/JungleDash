@@ -4,6 +4,8 @@ from pyglet.gl import GL_NEAREST
 from random import choice, randint
 from enum import Enum
 from sys import exit
+import random
+from arcade import Sound
 
 DEBUG = False
 SCREEN_WIDTH = 900
@@ -22,6 +24,14 @@ CLOUD_YPOS_MIN = 300
 CLOUD_YPOS_MAX = 340
 CLOUD_SPEED = -0.4
 SPAWN_DISTANCE = SCREEN_WIDTH
+BANANA_IMAGE = 'banana.png'
+SPECIAL_BANANA_IMAGE = 'special-banana.png'
+SHIELD_BANANA_IMAGE = 'shield-banana.png'
+BANANA_COLLECTION_SOUND = Sound(":resources:sounds/coin5.wav")
+SPECIAL_BANANA_COLLECTION_SOUND = Sound(ASSETS_PATH / "special-banana-collection-sound.wav")
+SHIELD_BANANA_COLLECTION_SOUND = Sound(ASSETS_PATH / "shield-banana-collection-sound.wav")
+CACTUS_COLLISION_SOUND = Sound(ASSETS_PATH / "cactus-collision-sound.wav")
+GAME_OVER_SOUND = Sound(ASSETS_PATH / "game-over-sound.wav")
 
 MonkeyStates = Enum("MonkeyStates", "IDLING RUNNING JUMPING CRASHING")
 GameStates = Enum("GameStates", "PLAYING GAMEOVER")
@@ -37,6 +47,8 @@ class JungleDash(arcade.Window):
 
         self.set_mouse_visible(True)
         arcade.set_background_color(BACKGROUND_COLOR)
+        
+        self.shield_banana_active = False
 
     def setup(self):
         self.elapsed_time = 0.0
@@ -65,7 +77,6 @@ class JungleDash(arcade.Window):
         self.horizon_list = arcade.SpriteList()
         for col in range(LEVEL_WIDTH_PIXELS // GROUND_WIDTH):
             horizon_sprite = arcade.Sprite(ASSETS_PATH / f"horizon.png")
-            # horizon_sprite.hit_box = [[-300, -10], [300, -10], [300, -6], [-300, -6]]
             horizon_sprite.left = GROUND_WIDTH * (col - 1)
             horizon_sprite.bottom = 0
             self.horizon_list.append(horizon_sprite)
@@ -73,7 +84,7 @@ class JungleDash(arcade.Window):
 
         # Monkey setup
         self.player_sprite_running = [ASSETS_PATH / "monkey.png", ASSETS_PATH / "monkey2.png"]
-        self.player_sprite_jumping = ASSETS_PATH / "monkey_jumping.png"
+        self.player_sprite_jumping = ASSETS_PATH / "monkey-jumping.png"
         self.player_sprite = arcade.Sprite(self.player_sprite_running[0])
         self.player_sprite.center_x = 200
         self.player_sprite.center_y = 120
@@ -92,14 +103,23 @@ class JungleDash(arcade.Window):
 
          # Bananas setup
         self.bananas_list = arcade.SpriteList()
+        self.special_bananas_list = arcade.SpriteList()
+        self.shield_bananas_list = arcade.SpriteList()
+        self.bananas = arcade.SpriteList()
         self.add_bananas(self.player_sprite.center_x + SPAWN_DISTANCE, LEVEL_WIDTH_PIXELS)
         self.scene.add_sprite_list("bananas", True, self.bananas_list)
+        self.scene.add_sprite_list("special_bananas", True, self.special_bananas_list)
+        self.scene.add_sprite_list("shield_bananas", True, self.shield_bananas_list)
 
         # Heart graphic setup
         self.heart = arcade.load_texture(ASSETS_PATH / "heart.png")
 
         # Timer setup
         self.timer_text = arcade.Text(text="00:00:00", start_x=SCREEN_WIDTH - 200, start_y=SCREEN_HEIGHT - 85, color=arcade.color.BLACK, font_size=20)
+        self.special_banana_timer = 0.0
+        self.special_banana_active = False
+        self.shield_banana_timer = 0.0
+        
         
         # Physics engine
         self.physics_engine = arcade.PhysicsEnginePlatformer(
@@ -109,13 +129,34 @@ class JungleDash(arcade.Window):
     def add_bananas(self, xmin, xmax):
         xpos = xmin
         while xpos < xmax:
-            banana_sprite = arcade.Sprite(ASSETS_PATH / f"banana.png")
-            banana_sprite.left = xpos
-            banana_sprite.bottom = 30
-            xpos += banana_sprite.width + randint(200, 300)
-            while banana_sprite.collides_with_list(self.obstacles_list):
-                banana_sprite.left = banana_sprite.left - 175
-            self.bananas_list.append(banana_sprite)
+            banana_variant= random.choices([BANANA_IMAGE, SPECIAL_BANANA_IMAGE, SHIELD_BANANA_IMAGE], weights=[0.8, 0.1, 0.1])[0]
+            if banana_variant == BANANA_IMAGE:
+                banana_sprite = arcade.Sprite(ASSETS_PATH / banana_variant)
+                banana_sprite.left = xpos
+                banana_sprite.bottom = 30
+                xpos += banana_sprite.width + randint(200, 300)
+                while banana_sprite.collides_with_list(self.obstacles_list):
+                    banana_sprite.left = banana_sprite.left - 175
+                self.bananas_list.append(banana_sprite)
+                self.bananas.append(banana_sprite)
+            elif banana_variant == SPECIAL_BANANA_IMAGE:
+                special_banana_sprite = arcade.Sprite(ASSETS_PATH / banana_variant)
+                special_banana_sprite.left = xpos
+                special_banana_sprite.bottom = 30
+                xpos += special_banana_sprite.width + randint(200, 300)
+                while special_banana_sprite.collides_with_list(self.obstacles_list):
+                    special_banana_sprite.left = special_banana_sprite.left - 175
+                self.special_bananas_list.append(special_banana_sprite)
+                self.bananas.append(special_banana_sprite)
+            elif banana_variant == SHIELD_BANANA_IMAGE:
+                shield_banana_sprite = arcade.Sprite(ASSETS_PATH / banana_variant)
+                shield_banana_sprite.left = xpos
+                shield_banana_sprite.bottom = 30
+                xpos += shield_banana_sprite.width + randint(200, 300)
+                while shield_banana_sprite.collides_with_list(self.obstacles_list):
+                    shield_banana_sprite.left = shield_banana_sprite.left - 200
+                self.shield_bananas_list.append(shield_banana_sprite)
+                self.bananas.append(shield_banana_sprite)
 
     def add_obstacles(self, xmin, xmax):
         xpos = xmin
@@ -155,7 +196,7 @@ class JungleDash(arcade.Window):
 
         # Adjust speed based on elapsed time
         global PLAYER_SPEED
-        PLAYER_SPEED = self.calculate_player_speed(3.0, self.elapsed_time, scaling_factor=0.05)
+        PLAYER_SPEED = self.calculate_player_speed(2.0, self.elapsed_time, scaling_factor=0.005)
 
         if MonkeyStates.JUMPING:
             self.player_sprite.texture = arcade.load_texture(self.player_sprite_jumping)
@@ -169,6 +210,7 @@ class JungleDash(arcade.Window):
                 self.monkey_frame_count = 0
                 self.monkey_frame = (self.monkey_frame + 1) % 2
             self.player_sprite.texture = arcade.load_texture(self.player_sprite_running[self.monkey_frame])
+
         if self.player_sprite.top > SCREEN_HEIGHT:
             self.player_sprite.top = SCREEN_HEIGHT
 
@@ -194,12 +236,55 @@ class JungleDash(arcade.Window):
                 cloud.left = SCREEN_WIDTH + randint(0, SCREEN_WIDTH // 2)
                 cloud.top = randint(CLOUD_YPOS_MIN, CLOUD_YPOS_MAX)
 
-        # Check for collisions with bananas
-        bananas_collected = self.player_sprite.collides_with_list(self.bananas_list)
-        for banana in bananas_collected:
-            self.monkey_state = MonkeyStates.CRASHING
-            banana.remove_from_sprite_lists()
-            self.score += 10  # Increase score by 10 for each banana collected
+        # Check for collisions with bananas, special bananas, and shield bananas
+        for special_banana in self.special_bananas_list:
+            if self.player_sprite.collides_with_sprite(special_banana):
+                arcade.play_sound(SPECIAL_BANANA_COLLECTION_SOUND,1.0,-1,False)
+                self.special_banana_active = True
+                self.special_banana_timer = 5.0
+                special_banana.remove_from_sprite_lists()
+        
+        for shield_banana in self.shield_bananas_list:
+            if self.player_sprite.collides_with_sprite(shield_banana):
+                arcade.play_sound(SHIELD_BANANA_COLLECTION_SOUND,1.0,-1,False)
+                self.shield_banana_active = True
+                self.shield_banana_timer = 5.0
+                shield_banana.remove_from_sprite_lists()
+        
+        for banana in self.bananas_list:
+            if self.player_sprite.collides_with_sprite(banana):
+                arcade.play_sound(BANANA_COLLECTION_SOUND,1.0,-1,False)
+                if self.special_banana_active:
+                    self.score += 20
+                    banana.remove_from_sprite_lists()
+                else:
+                    self.score += 10
+                    banana.remove_from_sprite_lists()
+        
+        if self.special_banana_active and not self.shield_banana_active:
+            self.player_sprite_running = [ASSETS_PATH / "special-monkey.png", ASSETS_PATH / "special-monkey2.png"]
+            self.player_sprite_jumping = ASSETS_PATH / "special-monkey-jumping.png"
+            self.special_banana_timer -= delta_time 
+            if self.special_banana_timer <= 0:
+                self.special_banana_active = False        
+        elif self.shield_banana_active and not self.special_banana_active:
+            self.player_sprite_running = [ASSETS_PATH / "shield-monkey.png", ASSETS_PATH / "shield-monkey2.png"]
+            self.player_sprite_jumping = ASSETS_PATH / "shield-monkey-jumping.png"
+            self.shield_banana_timer -= delta_time
+            if self.shield_banana_timer <= 0:
+                self.shield_banana_active = False
+        elif self.shield_banana_active and self.special_banana_active:
+            self.player_sprite_running = [ASSETS_PATH / "special-shield-monkey.png", ASSETS_PATH / "special-shield-monkey2.png"]
+            self.player_sprite_jumping = ASSETS_PATH / "special-shield-monkey-jumping.png"
+            self.shield_banana_timer -= delta_time
+            self.special_banana_timer -= delta_time
+            if self.shield_banana_timer <= 0:
+                self.shield_banana_active = False
+            if self.special_banana_timer <= 0:
+                self.special_banana_active = False
+        else:
+            self.player_sprite_running = [ASSETS_PATH / "monkey.png", ASSETS_PATH / "monkey2.png"]
+            self.player_sprite_jumping = ASSETS_PATH / "monkey-jumping.png"
 
         # Spawn new bananas relative to the monkey
         last_banana_x = max(banana.right for banana in self.bananas_list)
@@ -209,12 +294,15 @@ class JungleDash(arcade.Window):
         # Check for collisions with obstacles
         collisions = self.player_sprite.collides_with_list(self.obstacles_list)
         for collision in collisions:
-            self.monkey_state = MonkeyStates.CRASHING
-            collision.remove_from_sprite_lists()
-            self.health -= 40  # Decrease health on collision with obstacle
-            self.health_x -= 20
-            if self.health <= 0:
-                self.game_state = GameStates.GAMEOVER  # End game if health is gone
+            if not self.shield_banana_active:
+                arcade.play_sound(CACTUS_COLLISION_SOUND,1.0,-1,False)
+                self.monkey_state = MonkeyStates.CRASHING
+                collision.remove_from_sprite_lists()
+                self.health -= 40  # Decrease health on collision with obstacle
+                self.health_x -= 20
+                if self.health <= 0:
+                    self.game_state = GameStates.GAMEOVER  # End game if health is gone
+                self.monkey_state = MonkeyStates.RUNNING
             self.monkey_state = MonkeyStates.RUNNING
 
         # Spawn new obstacles relative to the monkey
@@ -223,7 +311,7 @@ class JungleDash(arcade.Window):
             self.add_obstacles(last_obstacle_x + SPAWN_DISTANCE, last_obstacle_x + 2 * SPAWN_DISTANCE)
 
         # Continuous horizon handling
-        first_horizon_segment = self.horizon_list[0]
+        first_horizon_segment = self.horizon_list[0]       
         if first_horizon_segment.right < self.camera_sprites.goal_position[0]:
             last_horizon_segment = self.horizon_list[-1]
             first_horizon_segment.left = last_horizon_segment.right
@@ -240,6 +328,9 @@ class JungleDash(arcade.Window):
         seconds = int(self.elapsed_time) % 60
         milliseconds = int((self.elapsed_time - seconds) * 100)
         self.timer_text.text = f"Timer: {int(minutes)}:{seconds}:{milliseconds}"
+
+        if self.game_state == GameStates.GAMEOVER:
+            arcade.play_sound(GAME_OVER_SOUND, 1.0, -1, False)
 
     def on_draw(self):
         arcade.start_render()
