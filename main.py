@@ -11,8 +11,9 @@ DEBUG = False
 SCREEN_WIDTH = 900
 SCREEN_HEIGHT = 500
 WINDOW_TITLE = "Jungle Dash"
-BACKGROUND_COLOR = (179, 235, 242)
+# BACKGROUND_COLOR = (179, 235, 242)
 ASSETS_PATH = pathlib.Path(__file__).resolve().parent / "assets"
+BACKGROUND_IMAGE = arcade.load_texture(ASSETS_PATH / "desert-background.png")
 GROUND_WIDTH = 500
 LEVEL_WIDTH_PIXELS = GROUND_WIDTH * ((SCREEN_WIDTH * 4) // GROUND_WIDTH)
 ALL_TEXTURES = [
@@ -46,7 +47,8 @@ class JungleDash(arcade.Window):
         self.camera_gui = arcade.Camera(SCREEN_WIDTH, SCREEN_HEIGHT)
 
         self.set_mouse_visible(True)
-        arcade.set_background_color(BACKGROUND_COLOR)
+        # arcade.background(BACKGROUND_IMAGE)
+
         
         self.shield_banana_active = False
 
@@ -91,7 +93,7 @@ class JungleDash(arcade.Window):
         self.player_sprite.texture = self.textures["monkey"]
         self.player_list = arcade.SpriteList()
         self.player_list.append(self.player_sprite)
-        self.scene.add_sprite("player", self.player_sprite)
+        
         self.monkey_state = MonkeyStates.RUNNING
         self.monkey_frame_count = 0
         self.monkey_frame = 0
@@ -100,6 +102,9 @@ class JungleDash(arcade.Window):
         self.obstacles_list = arcade.SpriteList()
         self.add_obstacles(self.player_sprite.center_x + SPAWN_DISTANCE, LEVEL_WIDTH_PIXELS)
         self.scene.add_sprite_list("obstacles", True, self.obstacles_list)
+
+        # render player in front of obstacles
+        self.scene.add_sprite("player", self.player_sprite)
 
          # Bananas setup
         self.bananas_list = arcade.SpriteList()
@@ -334,12 +339,14 @@ class JungleDash(arcade.Window):
 
     def on_draw(self):
         arcade.start_render()
+        arcade.draw_lrwh_rectangle_textured(0, 30, SCREEN_WIDTH, SCREEN_HEIGHT, BACKGROUND_IMAGE)
         self.camera_gui.use()
         self.clouds_list.draw(filter=GL_NEAREST)
         self.camera_sprites.use()
         self.scene.draw(filter=GL_NEAREST)
         self.camera_gui.use()
         self.timer_text.draw()
+        
         arcade.draw_texture_rectangle(28, SCREEN_HEIGHT - 30, self.heart.width, self.heart.height, self.heart)
 
         # Draw score
