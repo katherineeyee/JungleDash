@@ -11,7 +11,7 @@ DEBUG = False
 SCREEN_WIDTH = 900
 SCREEN_HEIGHT = 500
 WINDOW_TITLE = "Jungle Dash"
-# BACKGROUND_COLOR = (179, 235, 242)
+BACKGROUND_COLOR = (179, 235, 242)
 ASSETS_PATH = pathlib.Path(__file__).resolve().parent / "assets"
 # BACKGROUND_IMAGE = arcade.load_texture(ASSETS_PATH / "desert-background.png")
 GROUND_WIDTH = 500
@@ -33,7 +33,6 @@ SPECIAL_BANANA_COLLECTION_SOUND = Sound(ASSETS_PATH / "special-banana-collection
 SHIELD_BANANA_COLLECTION_SOUND = Sound(ASSETS_PATH / "shield-banana-collection-sound.wav")
 CACTUS_COLLISION_SOUND = Sound(ASSETS_PATH / "cactus-collision-sound.wav")
 GAME_OVER_SOUND = Sound(ASSETS_PATH / "game-over-sound.wav")
-BACKGROUND_COLOR = (179, 235, 242)
 
 MonkeyStates = Enum("MonkeyStates", "IDLING RUNNING JUMPING CRASHING")
 GameStates = Enum("GameStates", "PLAYING GAMEOVER")
@@ -49,6 +48,7 @@ class JungleDash(arcade.Window):
 
         self.set_mouse_visible(True)
         # arcade.background(BACKGROUND_IMAGE)
+        arcade.set_background_color(BACKGROUND_COLOR)
 
         
         self.shield_banana_active = False
@@ -186,7 +186,7 @@ class JungleDash(arcade.Window):
             bird_sprite = arcade.Sprite(ASSETS_PATH / f"bird.png")
             bird_sprite.left = xpos
             bird_sprite.bottom = randint(250, 400)
-            xpos += bird_sprite.width + randint(400, 600)
+            xpos += bird_sprite.width + randint(500, 600)
             self.birds_list.append(bird_sprite)
 
     def on_key_press(self, key, modifiers):
@@ -377,7 +377,6 @@ class JungleDash(arcade.Window):
 
     def on_draw(self):
         arcade.start_render()
-        arcade.draw_lrwh_rectangle_textured(0, 30, SCREEN_WIDTH, SCREEN_HEIGHT, BACKGROUND_IMAGE)
         self.camera_gui.use()
         # arcade.draw_lrwh_rectangle_textured(0, 30, SCREEN_WIDTH, SCREEN_HEIGHT, BACKGROUND_IMAGE)
         self.clouds_list.draw(filter=GL_NEAREST)
