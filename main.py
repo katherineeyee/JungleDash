@@ -11,9 +11,10 @@ DEBUG = False
 SCREEN_WIDTH = 900
 SCREEN_HEIGHT = 500
 WINDOW_TITLE = "Jungle Dash"
-# BACKGROUND_COLOR = (179, 235, 242)
+BACKGROUND_COLOR = (179, 235, 242)
+
 ASSETS_PATH = pathlib.Path(__file__).resolve().parent / "assets"
-BACKGROUND_IMAGE = arcade.load_texture(ASSETS_PATH / "desert-background.png")
+# BACKGROUND_IMAGE = arcade.load_texture(ASSETS_PATH / "desert-background.png")
 GROUND_WIDTH = 500
 LEVEL_WIDTH_PIXELS = GROUND_WIDTH * ((SCREEN_WIDTH * 4) // GROUND_WIDTH)
 ALL_TEXTURES = [
@@ -47,6 +48,7 @@ class JungleDash(arcade.Window):
         self.camera_gui = arcade.Camera(SCREEN_WIDTH, SCREEN_HEIGHT)
 
         self.set_mouse_visible(True)
+        arcade.set_background_color(BACKGROUND_COLOR)
         # arcade.background(BACKGROUND_IMAGE)
 
         
@@ -102,6 +104,11 @@ class JungleDash(arcade.Window):
         self.obstacles_list = arcade.SpriteList()
         self.add_obstacles(self.player_sprite.center_x + SPAWN_DISTANCE, LEVEL_WIDTH_PIXELS)
         self.scene.add_sprite_list("obstacles", True, self.obstacles_list)
+
+        # Birds setup
+        self.birds_list = arcade.SpriteList()
+        self.add_birds(self.player_sprite.center_x + SPAWN_DISTANCE, LEVEL_WIDTH_PIXELS)
+        self.scene.add_sprite_list("birds", True, self.birds_list)
 
         # render player in front of obstacles
         self.scene.add_sprite("player", self.player_sprite)
@@ -173,6 +180,15 @@ class JungleDash(arcade.Window):
             xpos += obstacle_sprite.width + randint(300, 400)
             self.obstacles_list.append(obstacle_sprite)
 
+    def add_birds(self, xmin, xmax):
+        xpos = xmin
+        while xpos < xmax:
+            bird_sprite = arcade.Sprite(ASSETS_PATH / f"bird.png")
+            bird_sprite.left = xpos
+            bird_sprite.bottom = randint(250, 400)
+            xpos += bird_sprite.width + randint(400, 600)
+            self.birds_list.append(bird_sprite)
+
     def on_key_press(self, key, modifiers):
         if key == arcade.key.SPACE and self.monkey_state != MonkeyStates.JUMPING:
             self.monkey_state = MonkeyStates.JUMPING
@@ -201,7 +217,7 @@ class JungleDash(arcade.Window):
 
         # Adjust speed based on elapsed time
         global PLAYER_SPEED
-        PLAYER_SPEED = self.calculate_player_speed(2.0, self.elapsed_time, scaling_factor=0.005)
+        PLAYER_SPEED = self.calculate_player_speed(2.0, self.elapsed_time, scaling_factor=0.03)
 
         if MonkeyStates.JUMPING:
             self.player_sprite.texture = arcade.load_texture(self.player_sprite_jumping)
@@ -315,6 +331,28 @@ class JungleDash(arcade.Window):
         if last_obstacle_x < self.player_sprite.center_x + SPAWN_DISTANCE:
             self.add_obstacles(last_obstacle_x + SPAWN_DISTANCE, last_obstacle_x + 2 * SPAWN_DISTANCE)
 
+
+        # Check for collisions with birds
+        collisions = self.player_sprite.collides_with_list(self.birds_list)
+        for collision in collisions:
+            if not self.shield_banana_active:
+                arcade.play_sound(CACTUS_COLLISION_SOUND,1.0,-1,False)
+                self.monkey_state = MonkeyStates.CRASHING
+                collision.remove_from_sprite_lists()
+                self.health -= 40 
+                self.health_x -= 20
+                if self.health <= 0:
+                    self.game_state = GameStates.GAMEOVER 
+                self.monkey_state = MonkeyStates.RUNNING
+            self.monkey_state = MonkeyStates.RUNNING
+
+        # Spawn new birds relative to the monkey
+        last_bird_x = max(bird.right for bird in self.birds_list)
+        if last_bird_x < self.player_sprite.center_x + SPAWN_DISTANCE:
+            self.add_birds(last_bird_x + SPAWN_DISTANCE, last_bird_x + 2 * SPAWN_DISTANCE)
+
+
+
         # Continuous horizon handling
         first_horizon_segment = self.horizon_list[0]       
         if first_horizon_segment.right < self.camera_sprites.goal_position[0]:
@@ -339,7 +377,7 @@ class JungleDash(arcade.Window):
 
     def on_draw(self):
         arcade.start_render()
-        arcade.draw_lrwh_rectangle_textured(0, 30, SCREEN_WIDTH, SCREEN_HEIGHT, BACKGROUND_IMAGE)
+        # arcade.draw_lrwh_rectangle_textured(0, 30, SCREEN_WIDTH, SCREEN_HEIGHT, BACKGROUND_IMAGE)
         self.camera_gui.use()
         self.clouds_list.draw(filter=GL_NEAREST)
         self.camera_sprites.use()
