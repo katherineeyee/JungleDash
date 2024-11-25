@@ -1,1 +1,1 @@
-special-monkey
+BACKGROUND_IMAGE = arcade.load_texture(ASSETS_PATH / "desert-background.png")

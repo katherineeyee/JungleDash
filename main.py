@@ -11,8 +11,7 @@ DEBUG = False
 SCREEN_WIDTH = 900
 SCREEN_HEIGHT = 500
 WINDOW_TITLE = "Jungle Dash"
-BACKGROUND_COLOR = (179, 235, 242)
-
+# BACKGROUND_COLOR = (179, 235, 242)
 ASSETS_PATH = pathlib.Path(__file__).resolve().parent / "assets"
 # BACKGROUND_IMAGE = arcade.load_texture(ASSETS_PATH / "desert-background.png")
 GROUND_WIDTH = 500
@@ -34,6 +33,7 @@ SPECIAL_BANANA_COLLECTION_SOUND = Sound(ASSETS_PATH / "special-banana-collection
 SHIELD_BANANA_COLLECTION_SOUND = Sound(ASSETS_PATH / "shield-banana-collection-sound.wav")
 CACTUS_COLLISION_SOUND = Sound(ASSETS_PATH / "cactus-collision-sound.wav")
 GAME_OVER_SOUND = Sound(ASSETS_PATH / "game-over-sound.wav")
+BACKGROUND_COLOR = (179, 235, 242)
 
 MonkeyStates = Enum("MonkeyStates", "IDLING RUNNING JUMPING CRASHING")
 GameStates = Enum("GameStates", "PLAYING GAMEOVER")
@@ -48,7 +48,6 @@ class JungleDash(arcade.Window):
         self.camera_gui = arcade.Camera(SCREEN_WIDTH, SCREEN_HEIGHT)
 
         self.set_mouse_visible(True)
-        arcade.set_background_color(BACKGROUND_COLOR)
         # arcade.background(BACKGROUND_IMAGE)
 
         
@@ -131,6 +130,7 @@ class JungleDash(arcade.Window):
         self.special_banana_timer = 0.0
         self.special_banana_active = False
         self.shield_banana_timer = 0.0
+        self.shield_banana_active = False
         
         
         # Physics engine
@@ -217,7 +217,7 @@ class JungleDash(arcade.Window):
 
         # Adjust speed based on elapsed time
         global PLAYER_SPEED
-        PLAYER_SPEED = self.calculate_player_speed(2.0, self.elapsed_time, scaling_factor=0.03)
+        PLAYER_SPEED = self.calculate_player_speed(2.0, self.elapsed_time, scaling_factor=0.005)
 
         if MonkeyStates.JUMPING:
             self.player_sprite.texture = arcade.load_texture(self.player_sprite_jumping)
@@ -377,8 +377,9 @@ class JungleDash(arcade.Window):
 
     def on_draw(self):
         arcade.start_render()
-        # arcade.draw_lrwh_rectangle_textured(0, 30, SCREEN_WIDTH, SCREEN_HEIGHT, BACKGROUND_IMAGE)
+        arcade.draw_lrwh_rectangle_textured(0, 30, SCREEN_WIDTH, SCREEN_HEIGHT, BACKGROUND_IMAGE)
         self.camera_gui.use()
+        # arcade.draw_lrwh_rectangle_textured(0, 30, SCREEN_WIDTH, SCREEN_HEIGHT, BACKGROUND_IMAGE)
         self.clouds_list.draw(filter=GL_NEAREST)
         self.camera_sprites.use()
         self.scene.draw(filter=GL_NEAREST)
