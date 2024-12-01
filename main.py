@@ -419,10 +419,18 @@ class JungleDash(arcade.Window):
                 self.monkey_state = MonkeyStates.RUNNING
             self.monkey_state = MonkeyStates.RUNNING
 
+        # Check if bird list is empty and add birds if necessary
+        if len(self.birds_list) == 0:
+            self.add_birds(self.player_sprite.center_x + SPAWN_DISTANCE, self.player_sprite.center_x + 2 * SPAWN_DISTANCE)
+
         # Spawn new birds relative to the monkey
-        last_bird_x = max(bird.right for bird in self.birds_list)
-        if last_bird_x < self.player_sprite.center_x + SPAWN_DISTANCE:
+        last_bird_x = max((bird.right for bird in self.birds_list), default=0)
+        if last_bird_x < self.player_sprite.center_x + SPAWN_DISTANCE or len(self.birds_list) < 3:
             self.add_birds(last_bird_x + SPAWN_DISTANCE, last_bird_x + 2 * SPAWN_DISTANCE)
+
+        for bird in self.birds_list:
+            if bird.right < 0:
+                bird.left = max(self.player_sprite.center_x + SPAWN_DISTANCE, bird.left + SCREEN_WIDTH)
 
         # Continuous horizon handling
         first_horizon_segment = self.horizon_list[0]       
