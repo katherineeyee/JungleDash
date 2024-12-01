@@ -13,7 +13,6 @@ SCREEN_HEIGHT = 500
 WINDOW_TITLE = "Jungle Dash"
 BACKGROUND_COLOR = (179, 235, 242)
 ASSETS_PATH = pathlib.Path(__file__).resolve().parent / "assets"
-# BACKGROUND_IMAGE = arcade.load_texture(ASSETS_PATH / "desert-background.png")
 GROUND_WIDTH = 500
 LEVEL_WIDTH_PIXELS = GROUND_WIDTH * ((SCREEN_WIDTH * 4) // GROUND_WIDTH)
 ALL_TEXTURES = [
@@ -34,9 +33,8 @@ SHIELD_BANANA_COLLECTION_SOUND = Sound(ASSETS_PATH / "shield-banana-collection-s
 CACTUS_COLLISION_SOUND = Sound(ASSETS_PATH / "cactus-collision-sound.wav")
 GAME_OVER_SOUND = Sound(ASSETS_PATH / "game-over-sound.wav")
 
-MonkeyStates = Enum("MonkeyStates", "IDLING RUNNING JUMPING CRASHING")
+MonkeyStates = Enum("MonkeyStates", "IDLING RUNNING JUMPING CRASHING SURFING")
 GameStates = Enum("GameStates", "PLAYING GAMEOVER")
-
 
 class JungleDash(arcade.Window):
     def __init__(self, width, height, title):
@@ -47,7 +45,6 @@ class JungleDash(arcade.Window):
         self.camera_gui = arcade.Camera(SCREEN_WIDTH, SCREEN_HEIGHT)
 
         self.set_mouse_visible(True)
-        # arcade.background(BACKGROUND_IMAGE)
         arcade.set_background_color(BACKGROUND_COLOR)
 
         self.floating_platform_list = arcade.SpriteList()
@@ -56,8 +53,6 @@ class JungleDash(arcade.Window):
         self.shield_bananas_list = arcade.SpriteList()
         self.bananas = arcade.SpriteList()
         self.obstacles_list = arcade.SpriteList()
-        self.shield_banana_active = False
-
 
     def setup(self):
         # Reset sprite lists
@@ -102,6 +97,7 @@ class JungleDash(arcade.Window):
         # Monkey setup
         self.player_sprite_running = [ASSETS_PATH / "monkey.png", ASSETS_PATH / "monkey2.png"]
         self.player_sprite_jumping = ASSETS_PATH / "monkey-jumping.png"
+        self.player_sprite_surfing = ASSETS_PATH / "monkey-surfing.png"
         self.player_sprite = arcade.Sprite(self.player_sprite_running[0])
         self.player_sprite.center_x = 200
         self.player_sprite.center_y = 120
@@ -119,13 +115,14 @@ class JungleDash(arcade.Window):
 
         # Birds setup
         self.birds_list = arcade.SpriteList()
+        self.bird_flying = [ASSETS_PATH / f"bird.png", ASSETS_PATH / f"bird2.png"]
         self.add_birds(self.player_sprite.center_x + SPAWN_DISTANCE, LEVEL_WIDTH_PIXELS)
         self.scene.add_sprite_list("birds", True, self.birds_list)
 
-        # render player in front of obstacles
+        # Render monkey in front of obstacles
         self.scene.add_sprite("player", self.player_sprite)
 
-         # Bananas setup
+        # Bananas setup
         self.bananas_list = arcade.SpriteList()
         self.special_bananas_list = arcade.SpriteList()
         self.shield_bananas_list = arcade.SpriteList()
@@ -140,14 +137,16 @@ class JungleDash(arcade.Window):
 
         # Timer setup
         self.timer_text = arcade.Text(text="00:00:00", start_x=SCREEN_WIDTH - 200, start_y=SCREEN_HEIGHT - 85, color=arcade.color.BLACK, font_size=20)
+        
         self.special_banana_timer = 0.0
         self.special_banana_active = False
         self.shield_banana_timer = 0.0
         self.shield_banana_active = False
+        self.floating_platform_broken = False
         
         # Physics engine
         self.physics_engine = arcade.PhysicsEnginePlatformer(
-            self.player_sprite, self.horizon_list, gravity_constant=0.4
+                self.player_sprite, self.horizon_list, gravity_constant=0.4
         )
 
         # Floating platforms setup
@@ -159,8 +158,8 @@ class JungleDash(arcade.Window):
         self.scene.add_sprite_list("bananas", True, self.bananas_list)
         self.scene.add_sprite_list("special_bananas", True, self.special_bananas_list)
         self.scene.add_sprite_list("shield_bananas", True, self.shield_bananas_list)
-        self.scene.add_sprite_list("obstacles", True, self.obstacles_list)
-        self.scene.add_sprite_list("floating_platforms", False, self.floating_platform_list)
+        # self.scene.add_sprite_list("obstacles", True, self.obstacles_list)
+        # self.scene.add_sprite_list("floating_platforms", False, self.floating_platform_list)
         
     def add_bananas(self, xmin, xmax):
         xpos = xmin
@@ -198,9 +197,10 @@ class JungleDash(arcade.Window):
         xpos = xmin
         while xpos < xmax:
             variant = choice(["1", "2", "3"])
-            obstacle_sprite = arcade.Sprite(ASSETS_PATH / f"cactus-{variant}.png")
+            obstacle_sprite = arcade.Sprite(ASSETS_PATH / f"jungle-plant-{variant}.png")
             obstacle_sprite.left = xpos
             obstacle_sprite.bottom = 30     
+            
             # No overlap with bananas
             while obstacle_sprite.collides_with_list(self.bananas_list):
                 obstacle_sprite.left += 50
@@ -210,9 +210,12 @@ class JungleDash(arcade.Window):
     def add_birds(self, xmin, xmax):
         xpos = xmin
         while xpos < xmax:
-            bird_sprite = arcade.Sprite(ASSETS_PATH / f"bird.png")
+            bird_sprite = arcade.Sprite(self.bird_flying[0])
             bird_sprite.left = xpos
             bird_sprite.bottom = randint(300, 400)
+            bird_sprite.bird_frame_count = 0
+            bird_sprite.bird_frame = 0
+            
             # No overlap with floating platforms
             if self.floating_platform_list and any(
                 platform.left < bird_sprite.right and platform.right > bird_sprite.left
@@ -227,6 +230,12 @@ class JungleDash(arcade.Window):
         if key == arcade.key.SPACE and self.monkey_state != MonkeyStates.JUMPING:
             self.monkey_state = MonkeyStates.JUMPING
             self.physics_engine.jump(6)
+        elif key == arcade.key.UP and self.monkey_state == MonkeyStates.SURFING:
+            print('surfing')
+            self.player_sprite.change_y = 2
+        elif key == arcade.key.DOWN and self.monkey_state == MonkeyStates.SURFING:
+            print('surfing')
+            self.player_sprite.change_y = -2
         elif key == arcade.key.ESCAPE:
             exit()
 
@@ -248,10 +257,13 @@ class JungleDash(arcade.Window):
             platform = arcade.Sprite(ASSETS_PATH / "platform.png", scale=0.5)
             platform.left = xpos
             platform.bottom = randint(200, 300)
+            platform.is_broken = False
+            
             # No overlap with birds
             if any(bird.left < platform.right and bird.right > platform.left for bird in self.birds_list):
                 xpos += randint(300, 500)
                 continue
+            
             # Add bananas on the platform
             num_bananas = randint(1, 2)
             for i in range(num_bananas):
@@ -262,7 +274,6 @@ class JungleDash(arcade.Window):
             xpos += platform.width + randint(300, 500)
             self.floating_platform_list.append(platform)
 
-
     def on_update(self, delta_time):
         if self.game_state == GameStates.GAMEOVER:
             self.player_sprite.change_x = 0
@@ -272,8 +283,11 @@ class JungleDash(arcade.Window):
         global PLAYER_SPEED
         PLAYER_SPEED = self.calculate_player_speed(2.0, self.elapsed_time, scaling_factor=0.025)
 
-        if self.monkey_state == MonkeyStates.JUMPING:
-            self.player_sprite.texture = arcade.load_texture(self.player_sprite_jumping)
+        if self.monkey_state == MonkeyStates.JUMPING or self.monkey_state == MonkeyStates.SURFING:
+            if self.monkey_state == MonkeyStates.JUMPING:
+                self.player_sprite.texture = arcade.load_texture(self.player_sprite_jumping)
+            elif self.monkey_state == MonkeyStates.SURFING:
+                self.player_sprite.texture = arcade.load_texture(self.player_sprite_surfing)
 
             # Check if monkey collides with a floating platform
             for platform in self.floating_platform_list:
@@ -281,10 +295,23 @@ class JungleDash(arcade.Window):
                     self.player_sprite.collides_with_sprite(platform)
                     and self.player_sprite.center_y < platform.center_y
                     and self.player_sprite.change_y > 0
+                    and platform.is_broken == False
                 ):
+                    platform.texture = arcade.load_texture(ASSETS_PATH / 'broken-platform.png')
                     self.player_sprite.top = platform.bottom
                     self.player_sprite.change_y = 0
+                    platform.is_broken = True
                     break
+                if (
+                    self.player_sprite.collides_with_sprite(platform)
+                    and self.player_sprite.center_y < platform.center_y
+                    and self.player_sprite.change_y > 0
+                    and platform.is_broken == True
+                ):
+                    print('here')
+                    platform.remove_from_sprite_lists()
+                    break
+
         elif self.monkey_state == MonkeyStates.RUNNING:
             self.monkey_frame_count += 1
             if self.monkey_frame_count >= 10:
@@ -292,6 +319,7 @@ class JungleDash(arcade.Window):
                 self.monkey_frame = (self.monkey_frame + 1) % len(self.player_sprite_running)
                 self.player_sprite.texture = arcade.load_texture(self.player_sprite_running[self.monkey_frame])
 
+        # Ensure that monkey dosen't go off screen
         if self.player_sprite.top > SCREEN_HEIGHT:
             self.player_sprite.top = SCREEN_HEIGHT
 
@@ -313,6 +341,14 @@ class JungleDash(arcade.Window):
         last_platform_x = max((platform.right for platform in self.floating_platform_list), default=0)
         if last_platform_x < self.player_sprite.center_x + SPAWN_DISTANCE:
             self.add_floating_platforms_with_bananas(last_platform_x + SPAWN_DISTANCE, last_platform_x + 2 * SPAWN_DISTANCE)
+
+        # Bird animation
+        for bird in self.birds_list:
+            bird.bird_frame_count += 1
+            if bird.bird_frame_count >= 10:
+                bird.bird_frame_count = 0
+                bird.bird_frame = (bird.bird_frame + 1) % len(self.bird_flying)
+                bird.texture = arcade.load_texture(self.bird_flying[bird.bird_frame])
 
         # Update horizon and camera with new PLAYER_SPEED
         self.player_sprite.change_x = PLAYER_SPEED
@@ -352,16 +388,27 @@ class JungleDash(arcade.Window):
                 arcade.play_sound(BANANA_COLLECTION_SOUND, 1.0, -1, False)
                 if self.special_banana_active:
                     self.score += 20
+                    if self.health < 200:
+                        self.health += 12 
+                        self.health_x += 6
                 else:
                     self.score += 10
+                    if self.health < 200:
+                        self.health += 6 
+                        self.health_x += 3
                 banana.remove_from_sprite_lists()
         
         if self.special_banana_active and not self.shield_banana_active:
             self.player_sprite_running = [ASSETS_PATH / "special-monkey.png", ASSETS_PATH / "special-monkey2.png"]
             self.player_sprite_jumping = ASSETS_PATH / "special-monkey-jumping.png"
+            self.player_sprite_surfing = ASSETS_PATH / "special-monkey-surfing.png"
+            self.monkey_state = MonkeyStates.SURFING
+            self.physics_engine.gravity_constant = 0
             self.special_banana_timer -= delta_time 
             if self.special_banana_timer <= 0:
-                self.special_banana_active = False        
+                self.special_banana_active = False 
+                self.physics_engine.gravity_constant = 0.4 
+                self.monkey_state = MonkeyStates.RUNNING      
         elif self.shield_banana_active and not self.special_banana_active:
             self.player_sprite_running = [ASSETS_PATH / "shield-monkey.png", ASSETS_PATH / "shield-monkey2.png"]
             self.player_sprite_jumping = ASSETS_PATH / "shield-monkey-jumping.png"
@@ -371,12 +418,17 @@ class JungleDash(arcade.Window):
         elif self.shield_banana_active and self.special_banana_active:
             self.player_sprite_running = [ASSETS_PATH / "special-shield-monkey.png", ASSETS_PATH / "special-shield-monkey2.png"]
             self.player_sprite_jumping = ASSETS_PATH / "special-shield-monkey-jumping.png"
+            self.player_sprite_surfing = ASSETS_PATH / "special-shield-monkey-surfing.png"
+            self.monkey_state = MonkeyStates.SURFING
+            self.physics_engine.gravity_constant = 0
             self.shield_banana_timer -= delta_time
             self.special_banana_timer -= delta_time
             if self.shield_banana_timer <= 0:
                 self.shield_banana_active = False
             if self.special_banana_timer <= 0:
                 self.special_banana_active = False
+                self.monkey_state = MonkeyStates.RUNNING
+                self.physics_engine.gravity_constant = 0.4
         else:
             self.player_sprite_running = [ASSETS_PATH / "monkey.png", ASSETS_PATH / "monkey2.png"]
             self.player_sprite_jumping = ASSETS_PATH / "monkey-jumping.png"
@@ -418,7 +470,7 @@ class JungleDash(arcade.Window):
                     self.game_state = GameStates.GAMEOVER 
                 self.monkey_state = MonkeyStates.RUNNING
             self.monkey_state = MonkeyStates.RUNNING
-
+	
         # Check if bird list is empty and add birds if necessary
         if len(self.birds_list) == 0:
             self.add_birds(self.player_sprite.center_x + SPAWN_DISTANCE, self.player_sprite.center_x + 2 * SPAWN_DISTANCE)
@@ -427,7 +479,7 @@ class JungleDash(arcade.Window):
         last_bird_x = max((bird.right for bird in self.birds_list), default=0)
         if last_bird_x < self.player_sprite.center_x + SPAWN_DISTANCE or len(self.birds_list) < 3:
             self.add_birds(last_bird_x + SPAWN_DISTANCE, last_bird_x + 2 * SPAWN_DISTANCE)
-
+        
         for bird in self.birds_list:
             if bird.right < 0:
                 bird.left = max(self.player_sprite.center_x + SPAWN_DISTANCE, bird.left + SCREEN_WIDTH)
@@ -452,17 +504,15 @@ class JungleDash(arcade.Window):
         if last_platform_x < self.player_sprite.center_x + SPAWN_DISTANCE:
             self.add_floating_platforms_with_bananas(last_platform_x + SPAWN_DISTANCE, last_platform_x + 2 * SPAWN_DISTANCE)
 
-
     def on_draw(self):
         arcade.start_render()
         self.camera_gui.use()
-        # arcade.draw_lrwh_rectangle_textured(0, 30, SCREEN_WIDTH, SCREEN_HEIGHT, BACKGROUND_IMAGE)
         self.clouds_list.draw(filter=GL_NEAREST)
         self.camera_sprites.use()
         self.scene.draw(filter=GL_NEAREST)
-        self.bananas_list.draw()
         self.camera_gui.use()
         self.timer_text.draw()
+        self.bananas_list.draw()
         
         arcade.draw_texture_rectangle(28, SCREEN_HEIGHT - 30, self.heart.width, self.heart.height, self.heart)
 
@@ -477,6 +527,9 @@ class JungleDash(arcade.Window):
         if self.game_state == GameStates.GAMEOVER:
             arcade.draw_text("G A M E   O V E R", SCREEN_WIDTH // 2, SCREEN_HEIGHT - 80, arcade.color.BLACK, 30, anchor_x="center")
             arcade.draw_text("press the space bar to restart", SCREEN_WIDTH // 2, SCREEN_HEIGHT - 120, arcade.color.BLACK, 15, anchor_x="center")
+            arcade.draw_rectangle_filled(self.health_x + 50, SCREEN_HEIGHT - 30, self.health, 20, (179, 235, 242))
+        else:
+            arcade.draw_rectangle_filled(self.health_x + 50, SCREEN_HEIGHT - 30, self.health, 20, arcade.color.GREEN)
 
 def main():
     window = JungleDash(SCREEN_WIDTH, SCREEN_HEIGHT, WINDOW_TITLE)
