@@ -19,7 +19,7 @@ ALL_TEXTURES = [
     "monkey",
 ]
 PLAYER_SPEED = 3.0
-MAX_CLOUDS = 4
+MAX_CLOUDS = 2
 CLOUD_YPOS_MIN = 300
 CLOUD_YPOS_MAX = 340
 CLOUD_SPEED = -0.4
@@ -30,7 +30,7 @@ SHIELD_BANANA_IMAGE = 'shield-banana.png'
 BANANA_COLLECTION_SOUND = Sound(":resources:sounds/coin5.wav")
 SPECIAL_BANANA_COLLECTION_SOUND = Sound(ASSETS_PATH / "special-banana-collection-sound.wav")
 SHIELD_BANANA_COLLECTION_SOUND = Sound(ASSETS_PATH / "shield-banana-collection-sound.wav")
-CACTUS_COLLISION_SOUND = Sound(ASSETS_PATH / "cactus-collision-sound.wav")
+PLANT_COLLISION_SOUND = Sound(ASSETS_PATH / "plant-collision-sound.wav")
 GAME_OVER_SOUND = Sound(ASSETS_PATH / "game-over-sound.wav")
 
 MonkeyStates = Enum("MonkeyStates", "IDLING RUNNING JUMPING CRASHING SURFING")
@@ -73,6 +73,8 @@ class JungleDash(arcade.Window):
         self.game_state = GameStates.PLAYING
 
         # Scene setup
+
+        self.background = arcade.load_texture(ASSETS_PATH / "jungle-background.png")
 
         # Clear sprite lists to ensure a fresh start
         self.scene = arcade.Scene()  # Reset the scene
@@ -442,7 +444,7 @@ class JungleDash(arcade.Window):
         collisions = self.player_sprite.collides_with_list(self.obstacles_list)
         for collision in collisions:
             if not self.shield_banana_active:
-                arcade.play_sound(CACTUS_COLLISION_SOUND,1.0,-1,False)
+                arcade.play_sound(PLANT_COLLISION_SOUND,1.0,-1,False)
                 self.monkey_state = MonkeyStates.CRASHING
                 collision.remove_from_sprite_lists()
                 self.health -= 40  # Decrease health on collision with obstacle
@@ -461,7 +463,7 @@ class JungleDash(arcade.Window):
         collisions = self.player_sprite.collides_with_list(self.birds_list)
         for collision in collisions:
             if not self.shield_banana_active:
-                arcade.play_sound(CACTUS_COLLISION_SOUND,1.0,-1,False)
+                arcade.play_sound(PLANT_COLLISION_SOUND,1.0,-1,False)
                 self.monkey_state = MonkeyStates.CRASHING
                 collision.remove_from_sprite_lists()
                 self.health -= 40 
@@ -506,6 +508,10 @@ class JungleDash(arcade.Window):
 
     def on_draw(self):
         arcade.start_render()
+
+        # Draw the background
+        arcade.draw_lrwh_rectangle_textured(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, self.background)
+
         self.camera_gui.use()
         self.clouds_list.draw(filter=GL_NEAREST)
         self.camera_sprites.use()
