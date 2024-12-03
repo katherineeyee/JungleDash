@@ -33,21 +33,29 @@ Floating platforms appear in different vertical positions and allow the monkey t
 
 The jungle setting includes a jungle background, moving clouds, and a camera that follows the monkey. The speed of the game increases slowly as the monkey is able to survive for longer. The player can monitor the monkey’s health by the health bar and the game score and duration.
 
-## How to Run
+## Instructions to Run Jungle Dash
 
-### Setup/Installation
+### System Requirements
 
-### 1. Download and install Python
+`Python 3.7` or higher
 
-### 2. Install the Arcade library
+Required Modules: arcade
 
-### `pip install arcade`
+### Setup and Installation
 
-### 3. Download the game files
+Download and install Python
 
-### 4. Run the game
+Install the Arcade library using the following command
+`pip install arcade`
 
-### `python main.py`
+Download the game files, including the assets folder
+
+### Running the Game
+
+Navigate to the directory containing the game files in a terminal or command prompt
+
+Execute the following command:
+`python main.py`
 
 ### Game Controls
 
