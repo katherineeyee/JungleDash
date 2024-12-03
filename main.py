@@ -519,8 +519,6 @@ class JungleDash(arcade.Window):
         self.camera_gui.use()
         self.timer_text.draw()
         self.bananas_list.draw()
-        
-        arcade.draw_texture_rectangle(28, SCREEN_HEIGHT - 30, self.heart.width, self.heart.height, self.heart)
 
         # Draw score
         arcade.draw_text(f"Score: {self.score:05}", SCREEN_WIDTH - 200, SCREEN_HEIGHT - 50, arcade.color.BLACK, 20)
@@ -533,9 +531,12 @@ class JungleDash(arcade.Window):
         if self.game_state == GameStates.GAMEOVER:
             arcade.draw_text("G A M E   O V E R", SCREEN_WIDTH // 2, SCREEN_HEIGHT - 80, arcade.color.BLACK, 30, anchor_x="center")
             arcade.draw_text("press the space bar to restart", SCREEN_WIDTH // 2, SCREEN_HEIGHT - 120, arcade.color.BLACK, 15, anchor_x="center")
-            arcade.draw_rectangle_filled(self.health_x + 50, SCREEN_HEIGHT - 30, self.health, 20, (179, 235, 242))
+            arcade.draw_rectangle_filled(self.health_x + 50, SCREEN_HEIGHT - 30, self.health, 20, (152, 204, 159))
         else:
             arcade.draw_rectangle_filled(self.health_x + 50, SCREEN_HEIGHT - 30, self.health, 20, arcade.color.GREEN)
+        
+        # Draw heart graphic
+        arcade.draw_texture_rectangle(28, SCREEN_HEIGHT - 30, self.heart.width, self.heart.height, self.heart)
 
 def main():
     window = JungleDash(SCREEN_WIDTH, SCREEN_HEIGHT, WINDOW_TITLE)
